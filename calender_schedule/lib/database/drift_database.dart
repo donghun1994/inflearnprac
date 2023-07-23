@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:calender_schedule/model/category_color.dart';
 import 'package:calender_schedule/model/schedule.dart';
+import 'package:calender_schedule/model/schedule_with_color.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
@@ -45,7 +46,45 @@ class LocalDatabase extends _$LocalDatabase {
   Future<List<CategoryColor>> getCategoryColors() =>
       select(categoryColors).get();
 
+  Future<Schedule> getScheduleById(int id) =>
+      (select(schedules)..where((tbl) => tbl.id.equals(id))).getSingle();
 
+  //delete
+  // go()는 모든 row들이 삭제됨
+  // id 값에 해당하는 row만 삭제
+
+  Future<int> removeSchedule(int id) =>
+      (delete(schedules)..where((tbl) => tbl.id.equals(id))).go();
+
+  Stream<List<ScheduleWithColor>> watchScedules(DateTime date) {
+    // 날짜값을 기준으로 조회해서 데이터 반환 +  색깔하고 조인,
+    final query = select(schedules).join([
+      innerJoin(categoryColors, categoryColors.id.equalsExp(schedules.colorID))
+    ]);
+
+    query.where(schedules.date.equals(date));
+    query.orderBy([OrderingTerm.asc(schedules.startTime)]);
+
+    return query.watch().map(
+          (rows) => rows
+              .map(
+                (row) => ScheduleWithColor(
+                  schedule: row.readTable(schedules),
+                  categoryColor: row.readTable(categoryColors),
+                ),
+              )
+              .toList(),
+        );
+
+    // ..은 실행이 된 대상을 반환함(where은 원래 void를 반환하는데 오히려 대상이 되는 schedules가 필요하기때문에 ..을 사용함)
+    // return (select(schedules)..where((tbl) => tbl.date.equals(date))).watch();
+  }
+
+  // update 스케쥴
+
+  Future<int> updateScheduleById(int id, SchedulesCompanion data) =>
+      //schedules 테이블 update 할건데 선택한 row의 id의 데이터를 가져와서 새로 들어온 data로 write 해라!
+      (update(schedules)..where((tbl) => tbl.id.equals(id))).write(data);
 
   // 데이터 베이스들의 상태 버전 / 테이블의 column이나 구조가 변경되면 버전을 바꿔줘야함
   @override

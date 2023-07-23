@@ -41,7 +41,7 @@ class ScheduleCard extends StatelessWidget {
                 content: content,
               ),
               SizedBox(width: 16),
-              _Category(color: Colors.red),
+              _Category(color: color),
             ],
           ),
         ),
